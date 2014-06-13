@@ -2,138 +2,178 @@
 //#include <SD.h>
 #include <GSM.h>
 
+#define GSMCONNECTTIMEOUT 120000
 
-#include "Configuration.h"
-
-
-Configuration *SystemConfiguration;
 char GPRS_APN[] = "general.t-mobile.uk";
 char GPRS_LOGIN[] = "user"; 
 char GPRS_PASSWORD[] = "wap";
 
 char WWWServer[] ="solarserver.dyndns.org";
-char WWWPath[] = "/";
+char WWWPath[] = "/Solar/upload.php";
 int WWWPort = 80;
 
 
 // PIN Number
 #define PINNUMBER ""
 
-
 // initialize the library instance
 GSMClient gsmClient;
 GPRS gprsService;
-GSM gsmAccess; 
+GSM gsmAccess(true); 
 GSMScanner gsmScanner;
+
+
+int GSMConnected = false;
+int GPRSAttached = false;
+int WWWServerConnected = false;
+
+unsigned int P
 
 
 void setup()
 {
   int notConnected = true;
   
+  SetPinModes();
+  
   Serial.begin(57600);
-  while (!Serial) {};
   
   Serial.println("Starting Arduino Solar Logger.");
   Serial.println("Loading Configuration");
-  //SystemConfiguration = new Configuration();
-  //SystemConfiguration->LoadConfiguration(GPRS_APN,sizeof(GPRS_APN), GPRS_LOGIN,sizeof(GPRS_LOGIN), GPRS_PASSWORD,sizeof(GPRS_PASSWORD));
   
-  //Serial.print("GPRS APN "); Serial.println(GPRS_APN);
-  //Serial.print("GPRS LOGIN ");Serial.println(GPRS_LOGIN);
-  //Serial.print("GPRS Password "); Serial.println(GPRS_PASSWORD);
-  //Serial.print("Remote Server "); Serial.print(WWWServer); Serial.print(":"); Serial.print(WWWPort,DEC); Serial.print(WWWPath);
+  Serial.print("GPRS APN "); Serial.println(GPRS_APN);
+  Serial.print("GPRS LOGIN ");Serial.println(GPRS_LOGIN);
+  Serial.print("GPRS Password "); Serial.println(GPRS_PASSWORD);
+  Serial.print("Remote Server "); PrintServerAddress(false); Serial.println(WWWPath);
   
   Serial.println("Connecting to GSM Service");
-
-  while(notConnected)
-  {
-    if(gsmAccess.begin(PINNUMBER)==GSM_READY) 
-    {
-      Serial.println("GSM Service Connected");
-      notConnected = false;
-    }
-    else
-    {
-      Serial.println("Not connected Halting");
-      do{}while(1);
-    }
-  }
   
-  Serial.println("Scanning available networks. May take some seconds.");
-  Serial.println(gsmScanner.readNetworks());
-  Serial.print("Current carrier: ");
-  Serial.println(gsmScanner.getCurrentCarrier());
-    
-  // returns strength and ber
-  // signal strength in 0-31 scale. 31 means power > 51dBm
-  // BER is the Bit Error Rate. 0-7 scale. 99=not detectable
-  Serial.print("Signal Strength: ");
-  Serial.print(gsmScanner.getSignalStrength());
-  Serial.println(" [0-31]");
+  ConnectToGSM();
   
-  Serial.println("Connecting to GPRS Service");
-  if(gprsService.attachGPRS(GPRS_APN, GPRS_LOGIN, GPRS_PASSWORD)!=GPRS_READY)
+  if (GSMConnected == true)
   {
+    Serial.print("Current carrier is ");
+    Serial.println(gsmScanner.getCurrentCarrier());
     
-    return;
-  } 
-  Serial.println("Connected to GPRS Service");
- 
+    Serial.print("Signal Strength: ");
+    Serial.print(gsmScanner.getSignalStrength());
+    Serial.println(" [0-31]");
+    
+    Serial.println("Attaching To GPRS");
+    AttachGPRS();
+  }  
 }
 
 void loop()
 {
-  Serial.println("Scanning available networks. May take some seconds.");
-  Serial.println(gsmScanner.readNetworks());
-  Serial.print("Current carrier: ");
-  Serial.println(gsmScanner.getCurrentCarrier());
-    
-  // returns strength and ber
-  // signal strength in 0-31 scale. 31 means power > 51dBm
-  // BER is the Bit Error Rate. 0-7 scale. 99=not detectable
-  Serial.print("Signal Strength: ");
-  Serial.print(gsmScanner.getSignalStrength());
-  Serial.println(" [0-31]");
+  MakeWebRequest();
+}
+
+
+void SetPinModes(void)
+{
+  pinMode(2,INPUT);
+}
+
+void ConnectToGSM(void)
+{
+  unsigned long TimeOut = GSMCONNECTTIMEOUT;
+  unsigned long ConnectTime = millis();
   
-  Serial.println("Conecting to Server");
-  if(gsmClient.connect(WWWServer, WWWPort))
+  if(GSMConnected == false)
   {
-    Serial.println("Connected");
-    gsmClient.print("GET ");
-    gsmClient.print(WWWPath);
-        
-    gsmClient.println(" HTTP/1.0");
-    gsmClient.println();
-    
-    boolean test = true;
-    while(test)
+    while((millis() - ConnectTime) < TimeOut)
     {
-      // if there are incoming bytes available 
-      // from the server, read and check them
-      if (gsmClient.available())
+      if(gsmAccess.begin(PINNUMBER, true, true)==GSM_READY)
       {
-        char c = client.read();
-        response += c;
-        
-        // cast response obtained from string to char array
-        char responsechar[response.length()+1];
-        response.toCharArray(responsechar, response.length()+1);
-        
-        // if response includes a "200 OK" substring
-        if(strstr(responsechar, "200 OK") != NULL)
-        {
-          Serial.println(oktext);
-          Serial.println("TEST COMPLETE!");
-          test = false;
-        }
+        Serial.println("GSM Connected");
+        GSMConnected = true;
+        return;
+      }
+      Serial.println("Wait...");
+      delay(1000);
+    }
+    Serial.println("GSM Not Available");
+    return;
+  }
+  Serial.println("GSM Connected Already");
+}
+
+void AttachGPRS(void)
+{
+  unsigned long TimeOut = GSMCONNECTTIMEOUT;
+  unsigned long ConnectTime = millis();
+  
+  if(GPRSAttached == false)
+  {
+    while((millis() - ConnectTime) < TimeOut)
+    {
+      if(gprsService.attachGPRS(GPRS_APN, GPRS_LOGIN, GPRS_PASSWORD)!=GPRS_READY)
+      {
+        Serial.println("Attached to GPRS Connected");
+        GPRSAttached = true;
+        return;
+      }
+      Serial.println("Wait...");
+      delay(1000);
+    }
+    Serial.println("GPRS Not Available");
+    return;
+  }
+  Serial.println("GPRS Attached Already");
+}
+
+void AttachToServer(void)
+{
+  unsigned long TimeOut = GSMCONNECTTIMEOUT;
+  unsigned long ConnectTime = millis();
+ 
+  if(WWWServerConnected == false)
+  {
+    while((millis() - ConnectTime) < TimeOut)
+    {
+      if(gsmClient.connect(WWWServer, WWWPort) == true)
+      {
+         WWWServerConnected = true;
+         Serial.print("Connected to "); PrintServerAddress(true);
+         return;
       }
     }
-    gsmClient.stop();
-  }
-  else
+    Serial.print("Unable to Connect to "); PrintServerAddress(true);
+  }  
+  Serial.print("Already Connected to "); PrintServerAddress(true);
+}
+ 
+void DetatchFromServer(void)
+{
+  if(WWWServerConnected==true)
   {
-    Serial.println("Unable to Connect");
+    gsmClient.stop();
+    WWWServerConnected = false;
+    Serial.print("Detatched from Server "); PrintServerAddress(true);
   }
-  
+}
+
+void MakeWebRequest(void)
+{
+  if( (GSMConnected == true) && (GPRSAttached == true))
+  {
+    Serial.println("Make Web Request");
+    AttachToServer();
+    if(WWWServerConnected == true)
+    {
+      DetatchFromServer();
+    }    
+  }
+    
+  delay(10000);
+}
+    
+void PrintServerAddress(int CRLF)
+{
+  Serial.print(WWWServer); Serial.print(":"); 
+  if(CRLF)
+    Serial.println(WWWPort,DEC);
+  else
+    Serial.print(WWWPort,DEC);
 }
