@@ -8,7 +8,7 @@ char GPRS_APN[] = "general.t-mobile.uk";
 char GPRS_LOGIN[] = "user"; 
 char GPRS_PASSWORD[] = "wap";
 
-char WWWServer[] ="solarserver.dyndns.org";
+char WWWServer[] ="solarspain.dyndns.org";
 char WWWPath[] = "/Solar/upload.php";
 int WWWPort = 80;
 
@@ -27,7 +27,9 @@ int GSMConnected = false;
 int GPRSAttached = false;
 int WWWServerConnected = false;
 
-unsigned int P
+int FirstPin = 2;
+int LastPin = 5;
+unsigned int InputValue[20];
 
 
 void setup()
@@ -66,6 +68,7 @@ void setup()
 
 void loop()
 {
+  ReadInputValues();
   MakeWebRequest();
 }
 
@@ -156,17 +159,27 @@ void DetatchFromServer(void)
 
 void MakeWebRequest(void)
 {
+  char Request[200];
+  
   if( (GSMConnected == true) && (GPRSAttached == true))
   {
     Serial.println("Make Web Request");
     AttachToServer();
     if(WWWServerConnected == true)
     {
+      FormWebRequest(Request);
+      Serial.println(Request);
+      gsmClient.println(Request);
+      gsmClient.print("Host: ");
+      gsmClient.println(WWWServer);
+      gsmClient.println("Connection: close");
+      gsmClient.println();
+      
       DetatchFromServer();
     }    
   }
     
-  delay(10000);
+  delay(60000);
 }
     
 void PrintServerAddress(int CRLF)
@@ -176,4 +189,33 @@ void PrintServerAddress(int CRLF)
     Serial.println(WWWPort,DEC);
   else
     Serial.print(WWWPort,DEC);
+}
+
+void ReadInputValues(void)
+{
+  int i;
+  
+  for(i=FirstPin;i<=LastPin;i++)
+  {
+    InputValue[i] = analogRead(i);
+  }
+}
+
+void FormWebRequest(char *Dest)
+{
+  int i;
+  char temp[50];
+  
+  strcpy(Dest,"GET ");
+  strcat(Dest,WWWPath);
+  strcat(Dest,"?");
+  
+  for(i=FirstPin;i<=LastPin;i++)
+  {
+    sprintf(temp,"%d=%d&", i-1, InputValue[i]);
+    strcat(Dest,temp);
+  }
+  
+  Dest[strlen(Dest)-1] = '\0';
+  strcat(Dest," HTTP/1.1");
 }
