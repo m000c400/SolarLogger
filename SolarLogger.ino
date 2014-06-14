@@ -1,5 +1,3 @@
-#include <EEPROM.h>
-//#include <SD.h>
 #include <GSM.h>
 
 #define GSMCONNECTTIMEOUT 120000
@@ -49,10 +47,18 @@ void setup()
   Serial.print("GPRS Password "); Serial.println(GPRS_PASSWORD);
   Serial.print("Remote Server "); PrintServerAddress(false); Serial.println(WWWPath);
   
+}
+
+void loop()
+{
+  char Request[200];
+
+  GSMConnected = false;
+  GPRSAttached = false;
+  WWWServerConnected = false;
+  
   Serial.println("Connecting to GSM Service");
-  
   ConnectToGSM();
-  
   if (GSMConnected == true)
   {
     Serial.print("Current carrier is ");
@@ -64,13 +70,30 @@ void setup()
     
     Serial.println("Attaching To GPRS");
     AttachGPRS();
-  }  
-}
-
-void loop()
-{
-  ReadInputValues();
-  MakeWebRequest();
+    if(GPRSAttached == true)
+    {
+      ReadInputValues();
+      Serial.println("Make Web Request");
+      AttachToServer();
+      if(WWWServerConnected == true)
+      {
+        FormWebRequest(Request);
+        Serial.println(Request);
+        gsmClient.println(Request);
+        gsmClient.print("Host: ");
+        gsmClient.println(WWWServer);
+        gsmClient.println("Connection: close");
+        gsmClient.println();
+        DetatchFromServer();
+      }    
+    }
+  }
+  Serial.println("Shutting Down GSM..");
+  CloseGSM();
+  Serial.println("GSM Down");
+  
+  Serial.println("Waiting....");
+  delay(60000);  
 }
 
 
@@ -101,6 +124,11 @@ void ConnectToGSM(void)
     return;
   }
   Serial.println("GSM Connected Already");
+}
+
+void CloseGSM(void)
+{
+  gsmAccess.shutdown();
 }
 
 void AttachGPRS(void)
@@ -161,32 +189,6 @@ void DetatchFromServer(void)
   }
 }
 
-void MakeWebRequest(void)
-{
-  char Request[200];
-  
-  if( (GSMConnected == true) && (GPRSAttached == true) )
-  {
-    Serial.println("Make Web Request");
-    AttachToServer();
-    if(WWWServerConnected == true)
-    {
-      FormWebRequest(Request);
-      Serial.println(Request);
-      gsmClient.println(Request);
-      gsmClient.print("Host: ");
-      gsmClient.println(WWWServer);
-      gsmClient.println("Connection: close");
-      gsmClient.println();
-      
-      DetatchFromServer();
-    }    
-  }
-  
-  Serial.println("Waiting for 5 mins");  
-  delay(READINGDELAY);
-}
-    
 void PrintServerAddress(int CRLF)
 {
   Serial.print(WWWServer); Serial.print(":"); 
