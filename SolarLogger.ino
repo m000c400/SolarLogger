@@ -3,13 +3,14 @@
 #include <GSM.h>
 
 #define GSMCONNECTTIMEOUT 120000
+#define READINGDELAY 300000
 
 char GPRS_APN[] = "general.t-mobile.uk";
 char GPRS_LOGIN[] = "user"; 
 char GPRS_PASSWORD[] = "wap";
 
 char WWWServer[] ="solarspain.dyndns.org";
-char WWWPath[] = "/Solar/upload.php";
+char WWWPath[] = "/solar/upload.php";
 int WWWPort = 80;
 
 
@@ -141,8 +142,11 @@ void AttachToServer(void)
          Serial.print("Connected to "); PrintServerAddress(true);
          return;
       }
+      Serial.println("Wait...");
+      delay(1000);
     }
     Serial.print("Unable to Connect to "); PrintServerAddress(true);
+    return;
   }  
   Serial.print("Already Connected to "); PrintServerAddress(true);
 }
@@ -161,7 +165,7 @@ void MakeWebRequest(void)
 {
   char Request[200];
   
-  if( (GSMConnected == true) && (GPRSAttached == true))
+  if( (GSMConnected == true) && (GPRSAttached == true) )
   {
     Serial.println("Make Web Request");
     AttachToServer();
@@ -178,8 +182,9 @@ void MakeWebRequest(void)
       DetatchFromServer();
     }    
   }
-    
-  delay(60000);
+  
+  Serial.println("Waiting for 5 mins");  
+  delay(READINGDELAY);
 }
     
 void PrintServerAddress(int CRLF)
