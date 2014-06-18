@@ -1,15 +1,19 @@
+
 #include <GSM.h>
+
 #include <SdFat.h>
-#include <SdFatUtil.h>  // define FreeRam()
+//#include <SdFatUtil.h>  // define FreeRam()
 #include <I2cMaster.h>
 #include <SoftRTClib.h>
 
-#define GSMCONNECTTIMEOUT 120000
-#define READINGDELAY 300000
 
-#define CHIP_SELECT 10
+//#define GSMCONNECTTIMEOUT 120000
+#define READINTERVAL 300  //Seconds!!!
+
+#define CHIP_SELECT 5
 #define MAXRETRY 5
 
+void PrintSeconds(int Seconds);
 
 #if defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__)
 #if !MEGA_SOFT_SPI
@@ -95,16 +99,30 @@ void setup()
   Serial.print("GPRS LOGIN ");Serial.println(GPRS_LOGIN);
   Serial.print("GPRS Password "); Serial.println(GPRS_PASSWORD);
   Serial.print("Remote Server "); PrintServerAddress(false); Serial.println(WWWPath);
-  
 }
 
 void loop()
 {
   char Request[200];
-
+  DateTime now;
+  
   GSMConnected = false;
   GPRSAttached = false;
   WWWServerConnected = false;
+  
+  
+  Serial.println("Waiting To Read Next Sample\r\nTime to Reading..");
+  
+  do
+  {
+     now = RTC.now();
+     PrintSeconds( READINTERVAL - (now.unixtime() % READINTERVAL) );
+  } while( (now.unixtime() % READINTERVAL) != 0);
+
+  Serial.println("\r\nMaking Reading....");
+  
+  ReadInputValues();
+  WriteFileLog();  
   
   Serial.println("Connecting to GSM Service");
   ConnectToGSM();
@@ -140,9 +158,6 @@ void loop()
   Serial.println("Shutting Down GSM..");
   CloseGSM();
   Serial.println("GSM Down");
-  
-  Serial.println("Waiting....");
-  delay(60000);  
 }
 
 
@@ -284,16 +299,39 @@ void  LoadConfiguration(void)
   strcpy(WWWPath,"/solar/upload.php");
 }  
 
+
 void WriteFileLog(void)
 {
   char filepath[100];
+  char filebuffer[100];
   DateTime now;
-  File LogFile;
-  
+  SdFile LogFile;
+ 
   now=RTC.now();
   
-  sprintf(filepath,"log/%04d%02d%02d.csv",now.year,now.month,now.day);
+  sprintf(filepath,"%04d%02d%02d.csv",now.year(),now.month(),now.day());
   
-  LogFile = sd.open(filepath,FILE_WRITE);
+  LogFile.open(filepath,O_RDWR | O_CREAT | O_AT_END);
   
+  sprintf(filebuffer,"%04d/%02d/%02d, %02d:%02d:%02d, %d, %d, %d, %d",now.year(),now.month(),now.day(),now.hour(), now.minute(), now.second(), InputValue[2],InputValue[3],InputValue[4],InputValue[5]);
+  Serial.println("************************************Write To Log File**************");
+  Serial.println(filepath);
+  Serial.println(filebuffer);
+  LogFile.println(filebuffer);
+  Serial.println("************************************Write To Log File**************");
   LogFile.close();
+}
+
+void PrintSeconds(int Value)
+{
+  static int Last = 0;
+  int CompareValue;
+  
+  CompareValue = Value / 10;
+  
+  if(CompareValue != Last)
+  {
+    Serial.println(Value);
+    Last = CompareValue;
+  }
+}
