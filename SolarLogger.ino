@@ -67,8 +67,8 @@ int GSMConnected = false;
 int GPRSAttached = false;
 int WWWServerConnected = false;
 
-int FirstPin = 2;
-int LastPin = 5;
+int FirstPin = 10;
+int LastPin = 13;
 unsigned int InputValue[20];
 
 
@@ -281,7 +281,7 @@ void FormWebRequest(char *Dest)
   
   for(i=FirstPin;i<=LastPin;i++)
   {
-    sprintf(temp,"%d=%d&", i-1, InputValue[i]);
+    sprintf(temp,"%d=%d&", (i+1)-FirstPin, InputValue[i]);
     strcat(Dest,temp);
   }
   
@@ -313,7 +313,7 @@ void WriteFileLog(void)
   
   LogFile.open(filepath,O_RDWR | O_CREAT | O_AT_END);
   
-  sprintf(filebuffer,"%04d/%02d/%02d, %02d:%02d:%02d, %d, %d, %d, %d",now.year(),now.month(),now.day(),now.hour(), now.minute(), now.second(), InputValue[2],InputValue[3],InputValue[4],InputValue[5]);
+  sprintf(filebuffer,"%04d/%02d/%02d, %02d:%02d:%02d, %d, %d, %d, %d",now.year(),now.month(),now.day(),now.hour(), now.minute(), now.second(), InputValue[FirstPin],InputValue[FirstPin+1],InputValue[FirstPin+2],InputValue[FirstPin+3]);
   Serial.println("************************************Write To Log File**************");
   Serial.println(filepath);
   Serial.println(filebuffer);
