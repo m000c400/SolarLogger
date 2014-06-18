@@ -291,12 +291,49 @@ void FormWebRequest(char *Dest)
 
 void  LoadConfiguration(void)
 {
+  SdFile ConfigFile;
+  char FileName[] = "/config.txt";
+  char buffer[100];
+/*
   strcpy(GPRS_APN,"general.t-mobile.uk");
   strcpy(GPRS_LOGIN,"user");
   strcpy(GPRS_PASSWORD,"wap");
 
   strcpy(WWWServer,"solarspain.dyndns.org");
   strcpy(WWWPath,"/solar/upload.php");
+*/
+  Serial.print("Opening "); Serial.println(FileName);
+  if(ConfigFile.open(FileName,O_READ) == 1)
+  {
+    Serial.println("Config File Opened");
+    while(ConfigFile.fgets(buffer,100)>1)
+    {
+      if(buffer[strlen(buffer)-1] == '\n') buffer[strlen(buffer)-1] = '\0';
+      
+      Serial.print("Read Line.."); Serial.println(buffer);
+      if(strstr(buffer,"apn=") != NULL)
+      {
+        strcpy(GPRS_APN,&buffer[4]);
+      }
+      else if(strstr(buffer,"login=") != NULL)
+      {
+        strcpy(GPRS_LOGIN,&buffer[6]);
+      }
+      else if(strstr(buffer,"password=") != NULL)
+      {
+        strcpy(GPRS_PASSWORD,&buffer[9]);
+      }
+      else if(strstr(buffer,"server=") != NULL)
+      {
+        strcpy(WWWServer,&buffer[7]);
+      }
+      else if(strstr(buffer,"path=") != NULL)
+      {
+        strcpy(WWWPath,&buffer[5]);
+      }
+    }
+    ConfigFile.close();
+  }
 }  
 
 
