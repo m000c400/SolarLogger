@@ -8,7 +8,7 @@
 
 
 //#define GSMCONNECTTIMEOUT 120000
-#define READINTERVAL 300  //Seconds!!!
+#define READINTERVAL 60  //Seconds!!!
 
 #define CHIP_SELECT 5
 #define MAXRETRY 5
@@ -68,7 +68,7 @@ int GPRSAttached = false;
 int WWWServerConnected = false;
 
 int FirstPin = 10;
-int LastPin = 13;
+int LastPin = 15;
 unsigned int InputValue[20];
 
 
@@ -294,14 +294,14 @@ void  LoadConfiguration(void)
   SdFile ConfigFile;
   char FileName[] = "/config.txt";
   char buffer[100];
-/*
+
   strcpy(GPRS_APN,"general.t-mobile.uk");
   strcpy(GPRS_LOGIN,"user");
   strcpy(GPRS_PASSWORD,"wap");
 
   strcpy(WWWServer,"solarspain.dyndns.org");
   strcpy(WWWPath,"/solar/upload.php");
-*/
+
   Serial.print("Opening "); Serial.println(FileName);
   if(ConfigFile.open(FileName,O_READ) == 1)
   {
@@ -346,17 +346,23 @@ void WriteFileLog(void)
  
   now=RTC.now();
   
-  sprintf(filepath,"%04d%02d%02d.csv",now.year(),now.month(),now.day());
+  sprintf(filepath,"/%04d%02d%02d.csv",now.year(),now.month(),now.day());
   
-  LogFile.open(filepath,O_RDWR | O_CREAT | O_AT_END);
-  
-  sprintf(filebuffer,"%04d/%02d/%02d, %02d:%02d:%02d, %d, %d, %d, %d",now.year(),now.month(),now.day(),now.hour(), now.minute(), now.second(), InputValue[FirstPin],InputValue[FirstPin+1],InputValue[FirstPin+2],InputValue[FirstPin+3]);
-  Serial.println("************************************Write To Log File**************");
-  Serial.println(filepath);
-  Serial.println(filebuffer);
-  LogFile.println(filebuffer);
-  Serial.println("************************************Write To Log File**************");
-  LogFile.close();
+  if(LogFile.open(filepath,O_RDWR | O_CREAT | O_AT_END) == 1)
+  {
+    Serial.print("Opened file "); Serial.println(filepath);
+    sprintf(filebuffer,"%04d/%02d/%02d, %02d:%02d:%02d, %d, %d, %d, %d, %d, %d",now.year(),now.month(),now.day(),now.hour(), now.minute(), now.second(), InputValue[FirstPin],InputValue[FirstPin+1],InputValue[FirstPin+2],InputValue[FirstPin+3],InputValue[FirstPin+4],InputValue[FirstPin+5]);
+    Serial.println("************************************Write To Log File**************");
+    Serial.println(filepath);
+    Serial.println(filebuffer);
+    LogFile.println(filebuffer);
+    Serial.println("************************************Write To Log File**************");
+    LogFile.close();
+  }
+  else
+  {
+    Serial.println("Error opening log file");
+  }
 }
 
 void PrintSeconds(int Value)
