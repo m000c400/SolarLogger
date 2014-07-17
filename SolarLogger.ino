@@ -112,6 +112,7 @@ void loop()
   
   
   Serial.println("Waiting To Read Next Sample\r\nTime to Reading..");
+
   
   do
   {
@@ -295,9 +296,9 @@ void  LoadConfiguration(void)
   char FileName[] = "/config.txt";
   char buffer[100];
 
-  strcpy(GPRS_APN,"general.t-mobile.uk");
-  strcpy(GPRS_LOGIN,"user");
-  strcpy(GPRS_PASSWORD,"wap");
+  strcpy(GPRS_APN,"bluevia.movistar.es");
+  strcpy(GPRS_LOGIN,"");
+  strcpy(GPRS_PASSWORD,"");
 
   strcpy(WWWServer,"solarspain.dyndns.org");
   strcpy(WWWPath,"/solar/upload.php");
