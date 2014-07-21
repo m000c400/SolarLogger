@@ -20,8 +20,8 @@ void PrintSeconds(int Seconds);
 #error set MEGA_SOFT_SPI nonzero in libraries/SdFat/SdFatConfig.h
 #endif  // MEGA_SOFT_SPI
 // Is a Mega use analog pins 4, 5 for software I2C
-const uint8_t RTC_SCL_PIN = 59;
-const uint8_t RTC_SDA_PIN = 58;
+const uint8_t RTC_SCL_PIN = A5;
+const uint8_t RTC_SDA_PIN = A4;
 SoftI2cMaster i2c(RTC_SDA_PIN, RTC_SCL_PIN);
 
 #elif defined(__AVR_ATmega32U4__)
